@@ -16,6 +16,7 @@ $config = [
             // !!! insert a secret key in the following (if it is empty) - this is required by cookie validation
             'cookieValidationKey' => 'K3rj3Qtdn4d9hcY2hmq1EnJda1h0J0Gf',
         ],
+        'urlManager' => require __DIR__ . '/_urlManager.php',
         'cache' => [
             'class' => 'yii\caching\FileCache',
         ],
