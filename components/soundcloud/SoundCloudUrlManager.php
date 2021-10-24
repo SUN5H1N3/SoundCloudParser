@@ -10,6 +10,11 @@ class SoundCloudUrlManager extends Model
 
     public function artist(string $slug): string
     {
-        return $this->baseUrl . '/' . $slug;
+        return $this->baseUrl . "/$slug";
+    }
+
+    public function artistPopularTracks(string $artistSlug): string
+    {
+        return $this->baseUrl . "/$artistSlug/popular-tracks";
     }
 }

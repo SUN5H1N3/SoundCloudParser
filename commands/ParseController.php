@@ -2,14 +2,18 @@
 
 namespace app\commands;
 
-use app\components\soundcloud\parsers\HtmlSoundCloudParser;
+use app\components\soundcloud\SoundCloudParseCreator;
+use yii\base\Exception;
 use yii\console\Controller;
 
 class ParseController extends Controller
 {
-    public function actionArtist(string $slug)
+    /**
+     * @throws Exception
+     */
+    public function actionTracks(string $slug, int $limit)
     {
-        $parser = new HtmlSoundCloudParser();
-        $parser->parseArtist($slug);
+        $parser = SoundCloudParseCreator::create();
+        $tracks = $parser->parseTracks($slug, $limit);
     }
 }

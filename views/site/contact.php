@@ -2,7 +2,7 @@
 
 /* @var $this yii\web\View */
 /* @var $form yii\bootstrap4\ActiveForm */
-/* @var $model app\models\ContactForm */
+/* @var $model \app\models\forms\ContactForm */
 
 use yii\bootstrap4\ActiveForm;
 use yii\bootstrap4\Html;
