@@ -35,4 +35,9 @@ abstract class ExtendedActiveRecord extends ActiveRecord
     {
         return parent::tableName();
     }
+
+    public function getActiveAttributes(): array
+    {
+        return $this->getAttributes($this->activeAttributes());
+    }
 }

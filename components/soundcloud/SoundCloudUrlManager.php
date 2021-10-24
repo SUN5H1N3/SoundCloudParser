@@ -17,4 +17,9 @@ class SoundCloudUrlManager extends Model
     {
         return $this->baseUrl . "/$artistSlug/popular-tracks";
     }
+
+    public function artistTracks(string $artistSlug): string
+    {
+        return $this->baseUrl . "/$artistSlug/tracks";
+    }
 }

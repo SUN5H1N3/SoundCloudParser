@@ -6,23 +6,26 @@ use app\components\extended\ExtendedActiveRecord;
 use app\models\queries\ArtistQuery;
 use app\models\queries\TrackQuery;
 use Yii;
-use yii\base\InvalidConfigException;
 use yii\db\ActiveQuery;
 
 /**
  * This is the model class for table "artist".
  *
  * @property int $id
+ * @property int|null $soundcloud_id
  * @property string $slug
- * @property string|null $nickname
- * @property string|null $public_name
- * @property string|null $public_location
- * @property string|null $status
+ * @property string|null $username
+ * @property string|null $full_name
+ * @property string|null $first_name
+ * @property string|null $last_name
+ * @property string|null $city
+ * @property string|null $country_code
+ * @property bool|null $verified
+ * @property int|null $likes_count
  * @property int|null $followers_count
- * @property int|null $following_count
+ * @property int|null $followings_count
  * @property int|null $tracks_count
  *
- * @property TrackArtist[] $trackArtists
  * @property Track[] $tracks
  */
 class Artist extends ExtendedActiveRecord
@@ -41,10 +44,12 @@ class Artist extends ExtendedActiveRecord
     public function rules(): array
     {
         return [
+            [['soundcloud_id', 'likes_count', 'followers_count', 'followings_count', 'tracks_count'], 'integer'],
+            [['verified'], 'boolean'],
             [['slug'], 'required'],
-            [['followers_count', 'following_count', 'tracks_count'], 'integer'],
-            [['slug', 'nickname', 'public_name', 'public_location', 'status'], 'string', 'max' => 255],
+            [['slug', 'username', 'full_name', 'first_name', 'last_name', 'city', 'country_code'], 'string', 'max' => 255],
             [['slug'], 'unique'],
+            [['soundcloud_id'], 'unique'],
         ];
     }
 
@@ -55,36 +60,30 @@ class Artist extends ExtendedActiveRecord
     {
         return [
             'id' => Yii::t('app', 'ID'),
+            'soundcloud_id' => Yii::t('app', 'Soundcloud ID'),
             'slug' => Yii::t('app', 'Slug'),
-            'nickname' => Yii::t('app', 'Nickname'),
-            'public_name' => Yii::t('app', 'Public Name'),
-            'public_location' => Yii::t('app', 'Public Location'),
-            'status' => Yii::t('app', 'Status'),
+            'username' => Yii::t('app', 'Username'),
+            'full_name' => Yii::t('app', 'Full Name'),
+            'first_name' => Yii::t('app', 'First Name'),
+            'last_name' => Yii::t('app', 'Last Name'),
+            'city' => Yii::t('app', 'City'),
+            'country_code' => Yii::t('app', 'Country Code'),
+            'verified' => Yii::t('app', 'Verified'),
+            'likes_count' => Yii::t('app', 'Likes Count'),
             'followers_count' => Yii::t('app', 'Followers Count'),
-            'following_count' => Yii::t('app', 'Following Count'),
+            'followings_count' => Yii::t('app', 'Followings Count'),
             'tracks_count' => Yii::t('app', 'Tracks Count'),
         ];
-    }
-
-    /**
-     * Gets query for [[TrackArtists]].
-     *
-     * @return ActiveQuery
-     */
-    public function getTrackArtists(): ActiveQuery
-    {
-        return $this->hasMany(TrackArtist::class, ['artist_id' => 'id']);
     }
 
     /**
      * Gets query for [[Tracks]].
      *
      * @return TrackQuery
-     * @throws InvalidConfigException
      */
     public function getTracks(): ActiveQuery
     {
-        return $this->hasMany(Track::class, ['id' => 'track_id'])->viaTable('track_artist', ['artist_id' => 'id']);
+        return $this->hasMany(Track::class, ['id' => 'track_id']);
     }
 
     /**

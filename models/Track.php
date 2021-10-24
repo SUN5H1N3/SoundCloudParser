@@ -12,16 +12,19 @@ use yii\db\ActiveQuery;
  * This is the model class for table "track".
  *
  * @property int $id
+ * @property int|null $soundcloud_id
+ * @property int|null $artist_id
  * @property string|null $name
  * @property string|null $performer
  * @property string|null $slug
- * @property int|null $duration
+ * @property string|null $artist_slug
+ * @property string|null $genre
+ * @property int|null $duration ms
  * @property string|null $publication_date
  * @property int|null $playback_count
  * @property int|null $comment_count
  *
- * @property Artist[] $artists
- * @property TrackArtist[] $trackArtists
+ * @property Artist $artist
  */
 class Track extends ExtendedActiveRecord
 {
@@ -43,9 +46,10 @@ class Track extends ExtendedActiveRecord
                 return Yii::$app->formatter->asDate($date, 'php:Y-m-d H:i:s');
             }],
             [['publication_date'], 'datetime', 'format' => 'php:Y-m-d H:i:s'],
-            [['playback_count', 'comment_count', 'duration'], 'integer'],
+            [['playback_count', 'comment_count', 'duration', 'soundcloud_id', 'artist_id'], 'integer'],
+            [['artist_id'], 'exist', 'targetClass' => Artist::class, 'targetAttribute' => 'id', 'skipOnEmpty' => true],
             [['name', 'performer'], 'trim'],
-            [['name', 'performer', 'slug'], 'string', 'max' => 255],
+            [['name', 'performer', 'slug', 'genre', 'artist_slug'], 'string', 'max' => 255],
         ];
     }
 
@@ -66,23 +70,13 @@ class Track extends ExtendedActiveRecord
     }
 
     /**
-     * Gets query for [[Artists]].
+     * Gets query for [[Artist]].
      *
      * @return ArtistQuery
      */
-    public function getArtists(): ActiveQuery
+    public function getArtist(): ActiveQuery
     {
-        return $this->hasMany(Artist::className(), ['id' => 'artist_id'])->viaTable('track_artist', ['track_id' => 'id']);
-    }
-
-    /**
-     * Gets query for [[TrackArtists]].
-     *
-     * @return ActiveQuery
-     */
-    public function getTrackArtists(): ActiveQuery
-    {
-        return $this->hasMany(TrackArtist::className(), ['track_id' => 'id']);
+        return $this->hasOne(Artist::class, ['id' => 'artist_id']);
     }
 
     /**
