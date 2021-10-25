@@ -150,6 +150,22 @@ class SoundCloudParserHtml extends SoundCloudParser
             $track = $existedTracks[$slug] ?? new Track(['slug' => $slug]);
             $tracks[] = $this->parseTrack($track, $trackPhpQuery, $artistSlug);
         }
+        return $this->addArtistIdIfExisted($tracks, $artistSlug);
+    }
+
+    /**
+     * @param Track[] $tracks
+     * @return Track[]
+     */
+    private function addArtistIdIfExisted(array $tracks, string $artistSlug): array
+    {
+        $artist = $this->getExistedArtist($artistSlug);
+        if (!$artist) {
+            return $tracks;
+        }
+        foreach ($tracks as $track) {
+            $track->artist_id = $artist->id;
+        }
         return $tracks;
     }
 
