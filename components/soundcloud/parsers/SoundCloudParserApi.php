@@ -48,16 +48,18 @@ class SoundCloudParserApi extends SoundCloudParser
      */
     private function getArtistBySlug(string $artistSlug): Artist
     {
-        $dbArtist = Artist::find()
-            ->select('soundcloud_id')
-            ->where(['slug' => $artistSlug])
-            ->one();
-
+        $dbArtist = $this->getExistedArtist($artistSlug);
         if ($dbArtist && $dbArtist->soundcloud_id) {
             return $dbArtist;
         }
 
-        $htmlParser = new StableSoundCloudParser();
+        $stableParser = new StableSoundCloudParser();
+        $parsedArtist = $stableParser->parseArtist($artistSlug);
+        if ($parsedArtist->soundcloud_id) {
+            return $parsedArtist;
+        }
+
+        $htmlParser = new SoundCloudParserHtml();
         return $htmlParser->parseArtist($artistSlug);
     }
 
