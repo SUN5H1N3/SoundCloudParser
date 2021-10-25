@@ -12,43 +12,19 @@ use yii\db\ActiveRecord;
 
 class ParseController extends Controller
 {
-    public function actionHelp(): void
-    {
-        $commandTemplates = [
-            'php yii parse/artist [artist-slug] [?parser]',
-            'php yii parse/tracks [artist-slug] [?limit] [?parser]',
-            'php yii parse/link-tracks-artists [?artist-slug]',
-            'php yii parse/help',
-        ];
-
-        echo 'Command templates:' . PHP_EOL;
-        foreach ($commandTemplates as $template) {
-            echo "\t" . $template . PHP_EOL;
-        }
-    }
-
     /**
+     * @param string $slug
+     * @param string|null $parserId
+     * @param int $limit
      * @throws Exception
      */
-    public function actionTracks(string $slug, int $limit = 10, string $parserId = NULL): void
+    public function actionTracks(string $slug, string $parserId = NULL, int $limit = 10): void
     {
         $parser = $this->createParser($parserId);
         $tracks = $parser->parseTracks($slug, $limit);
 
-        $parsedSlugs = array_map(static fn(Track $track) => $track->slug, $tracks);
-        $existedTracks = Track::find()
-            ->where(['slug' => $parsedSlugs])
-            ->indexBy('slug')
-            ->all();
-
-        if ($parser->isSuccessLastParse) {
+        if (!$parser->hasErrors()) {
             foreach ($tracks as $track) {
-                if (array_key_exists($track->slug, $existedTracks)) {
-                    $notNullAttributes = array_filter($track->attributes);
-                    $existedTrack = $existedTracks[$track->slug];
-                    $existedTrack->setAttributes($notNullAttributes);
-                    $track = $existedTrack;
-                }
                 echo $this->saveModel($track, $modelsSavedCount);
             }
         }
@@ -64,13 +40,7 @@ class ParseController extends Controller
         $parser = $this->createParser($parserId);
         $artist = $parser->parseArtist($slug);
 
-        if ($parser->isSuccessLastParse) {
-            $existedArtist = Artist::findOne(['slug' => $artist->slug]);
-            if ($existedArtist) {
-                $notNullAttributes = array_filter($artist->attributes);
-                $existedArtist->setAttributes($notNullAttributes);
-                $artist = $existedArtist;
-            }
+        if (!$parser->hasErrors()) {
             echo $this->saveModel($artist);
         }
     }
@@ -111,6 +81,21 @@ class ParseController extends Controller
             }
         }
         echo $counter . ' models saved.';
+    }
+
+    public function actionHelp(): void
+    {
+        $commandTemplates = [
+            'php yii parse/artist [artist-slug] [?parser]',
+            'php yii parse/tracks [artist-slug] [?parser] [?limit]',
+            'php yii parse/link-tracks-artists [?artist-slug]',
+            'php yii parse/help',
+        ];
+
+        echo 'Command templates:' . PHP_EOL;
+        foreach ($commandTemplates as $template) {
+            echo "\t" . $template . PHP_EOL;
+        }
     }
 
     /**

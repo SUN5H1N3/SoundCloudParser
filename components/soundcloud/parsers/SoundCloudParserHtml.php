@@ -44,25 +44,50 @@ class SoundCloudParserHtml extends SoundCloudParser
         $htmlDoc = phpQuery::newDocumentHTML($response->content);
         $scripts = $htmlDoc->find('script');
 
-        $artist = new Artist();
+        $artist = $this->getExistedArtist($slug) ?? new Artist();
 
         foreach ($scripts as $scriptDOMElem) {
             $scriptElem = pq($scriptDOMElem);
             $scriptContent = $scriptElem->text();
+
             if (stripos($scriptContent, 'window.__sc_hydration') !== false) {
-                $this->_isSuccessLastParse = $this->parseArtistScript($artist, $scriptContent);
+                if (!$this->parseArtistScript($artist, $scriptContent)) {
+                    return $artist;
+                }
+
+                $this->log('Parsed artist attributes:', $artist->getDirtyAttributes());
+                return $artist;
             }
         }
 
-        $this->log('Parsed artist attributes:', $artist->getDirtyAttributes());
-
+        $this->addParseError('Script for parsing not found.');
         return $artist;
+    }
+
+    /**
+     * @param string $artistSlug
+     * @param int|null $limit
+     * @return Track[]
+     * @throws Exception
+     * @throws InvalidConfigException
+     */
+    public function parseTracks(string $artistSlug, int $limit = NULL): array
+    {
+        $url = $this->urlManager->artistPopularTracks($artistSlug);
+        $response = $this->sendRequest($url);
+        $tracks = $this->getParsedTracks($response->content, $artistSlug, $limit);
+
+        if (!$tracks) {
+            $this->addParseError('No tracks found from html.');
+        }
+        return $tracks;
     }
 
     private function parseArtistScript(Artist $artist, string $scriptContent): bool
     {
         $data = $this->extractDataFromArtistScript($scriptContent);
         if (!$data) {
+            $this->addParseError('No parsed data from script.');
             return false;
         }
 
@@ -102,43 +127,57 @@ class SoundCloudParserHtml extends SoundCloudParser
     }
 
     /**
-     * @param string $artistSlug
-     * @param int|null $limit
-     * @return Track[]
      * @throws Exception
      * @throws InvalidConfigException
      */
-    public function parseTracks(string $artistSlug, int $limit = NULL): array
+    private function getParsedTracks(string $responseData, string $artistSlug, int $limit = NULL): array
     {
-        $url = $this->urlManager->artistPopularTracks($artistSlug);
-        $response = $this->sendRequest($url);
-
-        $htmlDoc = phpQuery::newDocumentHTML($response->content);
-        $tracksHtml = $htmlDoc->find("[itemprop='track']");
-        $tracks = [];
-        $tracksCount = 0;
-
-        /** @var DOMElement $trackElem */
-        foreach ($tracksHtml as $trackElem) {
-            if ($tracksCount++ >= $limit) {
-                break;
-            }
-
-            $trackPhpQuery = pq($trackElem);
-            $tracks[] = $this->parseTrack($trackPhpQuery, $artistSlug);
+        $htmlDoc = phpQuery::newDocumentHTML($responseData);
+        $tracksElems = $htmlDoc->find("[itemprop='track']")->elements;
+        if ($limit !== NULL) {
+            $tracksElems = array_slice($tracksElems, 0, $limit);
         }
+        $slugs = $this->parseTrackSlugs($tracksElems, $artistSlug);
+        if (!$slugs) {
+            return [];
+        }
+        $tracksElems = array_combine($slugs, $tracksElems);
+        $existedTracks = $this->getExistedTracks($slugs);
 
-        $this->_isSuccessLastParse = (bool) $tracks;
+        $tracks = [];
+        foreach ($tracksElems as $slug => $trackElem) {
+            $trackPhpQuery = pq($trackElem);
+            $track = $existedTracks[$slug] ?? new Track(['slug' => $slug]);
+            $tracks[] = $this->parseTrack($track, $trackPhpQuery, $artistSlug);
+        }
         return $tracks;
     }
 
     /**
+     * @param DOMElement[] $tracksElems
+     * @param string $artistSlug
+     * @return array
+     */
+    private function parseTrackSlugs(array $tracksElems, string $artistSlug): array
+    {
+        $slugs = [];
+        foreach ($tracksElems as $trackElem) {
+            $trackPhpQuery = pq($trackElem);
+            $nameElem = $trackPhpQuery->find("[href^='/$artistSlug/']");
+            $slugs[] = $this->getSlug($nameElem->attr('href'));
+        }
+        return $slugs;
+    }
+
+    /**
+     * @param Track $track
      * @param phpQueryObject $pq
      * @param string $artistSlug
      * @return Track
      * @throws Exception
+     * @throws InvalidConfigException
      */
-    private function parseTrack(phpQueryObject $pq, string $artistSlug): Track
+    private function parseTrack(Track $track, phpQueryObject $pq, string $artistSlug): Track
     {
         $performerElem = $pq->find("[href='/$artistSlug']");
         $nameElem = $pq->find("[href^='/$artistSlug/']");
@@ -146,14 +185,12 @@ class SoundCloudParserHtml extends SoundCloudParser
         $durationElem = $pq->find("[itemprop='duration']");
         $genreElem = $pq->find("[itemprop='genre']");
 
-        $track = new Track();
-        $track->name = $this->getNameByTitle($nameElem->text());
-        $track->performer = $performerElem->text();
-        $track->slug = $this->getSlug($nameElem->attr('href'));
-        $track->artist_slug = $artistSlug;
-        $track->publication_date = Yii::$app->formatter->asDate($publicationElem->text(), 'php:Y-m-d H:i:s');
-        $track->duration = (new ExtendedDateInterval($durationElem->attr('content')))->toMilliseconds();
-        $track->genre = $genreElem->attr('content');
+        $track->name = $this->getTrackNameByTitle($nameElem->text()) ?? $track->name;
+        $track->performer = $performerElem->text() ?? $track->performer;
+        $track->artist_slug = $artistSlug ?? $track->artist_slug;
+        $track->publication_date = Yii::$app->formatter->asDate($publicationElem->text(), 'php:Y-m-d H:i:s') ?? $track->publication_date;
+        $track->duration = (new ExtendedDateInterval($durationElem->attr('content')))->toMilliseconds() ?? $track->duration;
+        $track->genre = $genreElem->attr('content') ?? $track->genre;
 
         $this->log('Parsed track attributes:', $track->getDirtyAttributes());
 

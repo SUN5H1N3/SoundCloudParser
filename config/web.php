@@ -4,7 +4,8 @@ $params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/db.php';
 
 $config = [
-    'id' => 'basic',
+    'id' => 'sound-cloud-parser',
+    'name' => 'Sound Cloud Parser',
     'basePath' => dirname(__DIR__),
     'bootstrap' => ['log'],
     'aliases' => [

@@ -10,20 +10,17 @@ use yii\base\Model;
 use yii\helpers\Inflector;
 
 /**
- * @property-read bool $isSuccessLastParse
+ * @property-read array $parseErrors
  */
 abstract class SoundCloudParser extends Model
 {
+    public const REGEX_TACK_TITLE = '/(?<performer>.+)\s[\-–—]\s(?<name>.+)$/u';
+
+    public const PARSE_ERROR = 'parse_error';
+
     public bool $enableLiveLogs = false;
 
     private array $_logs = [];
-
-    protected bool $_isSuccessLastParse = false;
-
-    public function getIsSuccessLastParse(): bool
-    {
-        return $this->_isSuccessLastParse;
-    }
 
     /**
      * @param string $slug
@@ -41,6 +38,28 @@ abstract class SoundCloudParser extends Model
     abstract public function parseTracks(string $artistSlug, int $limit = NULL): array;
 
     /**
+     * @return string
+     */
+    public static function getId(): string
+    {
+        return Inflector::camel2id(StringHelper::basename(static::class));
+    }
+
+    /**
+     * @param string $message
+     */
+    protected function addParseError(string $message): void
+    {
+        $this->addError(self::PARSE_ERROR, $message);
+        $this->log($message);
+    }
+
+    protected function getParseErrors(): array
+    {
+        return $this->getErrors(self::PARSE_ERROR);
+    }
+
+    /**
      * @return array
      */
     public function getLogs(): array
@@ -56,6 +75,7 @@ abstract class SoundCloudParser extends Model
     {
         $separator = is_string($additionalInfo) ? ': ' : PHP_EOL;
         $additionalInfo = is_string($additionalInfo) ? $additionalInfo : print_r($additionalInfo, true);
+
         $log = StringHelper::implode([$message, $additionalInfo], $separator);
         $this->_logs[] = $log;
 
@@ -64,16 +84,28 @@ abstract class SoundCloudParser extends Model
         }
     }
 
-    protected function getNameByTitle(string $title): string
+    /**
+     * @param string $title
+     * @return string
+     */
+    protected function getTrackNameByTitle(string $title): string
     {
-        if (preg_match('/(?<performer>.+)\s[\-–—]\s(?<name>.+)$/u', $title, $matches)) {
+        if (preg_match(self::REGEX_TACK_TITLE, $title, $matches)) {
             return $matches['name'];
         }
         return $title;
     }
 
-    public static function getId(): string
+    protected function getExistedArtist(string $slug): ?Artist
     {
-        return Inflector::camel2id(StringHelper::basename(static::class));
+        return Artist::findOne(['slug' => $slug]);
+    }
+
+    protected function getExistedTracks(array $slugs): array
+    {
+        return Track::find()
+            ->where(['slug' => $slugs])
+            ->indexBy('slug')
+            ->all();
     }
 }

@@ -24,20 +24,20 @@ class SoundCloudParserApi extends SoundCloudParser
 
     public function parseArtist(string $slug): Artist
     {
-        $this->_isSuccessLastParse = false;
-
-        $message = 'No available API methods for parse artist. Use other parser ([stable] recommended).';
-        $this->log($message);
-        $this->addError('api', $message);
+        $this->addParseError('No available API methods for parse artist. Use other parser ([' . StableSoundCloudParser::getId() . '] recommended).');
 
         return new Artist();
     }
 
     public function parseTracks(string $artistSlug, int $limit = NULL): array
     {
-        $this->_isSuccessLastParse = false;
-
         $artist = $this->getArtistBySlug($artistSlug);
+
+        if (!$artist->soundcloud_id) {
+            $this->addParseError('Cannot find sound_cloud_id for this slug(' . $artistSlug . ').');
+            return [];
+        }
+
         $tracksData = $this->getTracksData($artist->soundcloud_id, $limit);
         return $this->getTrackModels($tracksData, $artist);
     }
@@ -57,7 +57,7 @@ class SoundCloudParserApi extends SoundCloudParser
             return $dbArtist;
         }
 
-        $htmlParser = new SoundCloudParserHtml();
+        $htmlParser = new StableSoundCloudParser();
         return $htmlParser->parseArtist($artistSlug);
     }
 
@@ -70,15 +70,19 @@ class SoundCloudParserApi extends SoundCloudParser
     private function getTrackModels(array $tracksData, Artist $artist): array
     {
         if (!$tracksData) {
+            $this->addParseError('No tracks data from api.');
             return [];
         }
 
-        $this->_isSuccessLastParse = true;
         $tracks = [];
         Yii::$app->formatter->nullDisplay = NULL;
 
+        $existedTracks = $this->getExistedTracks(array_map(static fn($item) => $item['permalink'], $tracksData));
+
         foreach ($tracksData as $trackData) {
-            $track = new Track();
+            $slug = $trackData['permalink'];
+            $track = $existedTracks[$slug] ?? new Track();
+            $track->slug = $slug;
             $track->comment_count = $trackData['comment_count'] ?? $track->comment_count;
             $track->artist_id = $artist->id ?? $track->artist_id;
             $track->duration = $trackData['duration'] ?? $track->duration;
@@ -86,11 +90,10 @@ class SoundCloudParserApi extends SoundCloudParser
             $track->soundcloud_id = $trackData['id'] ?? $track->soundcloud_id;
             $publicationDate = $tracksData['release_date'] ?? $tracksData['display_date'] ?? $trackData['created_at'];
             $track->publication_date = Yii::$app->formatter->asDate($publicationDate, 'php:Y-m-d H:i:s') ?? $track->publication_date;
-            $track->slug = $trackData['permalink'] ?? $track->slug;
             $track->playback_count = $trackData['playback_count'] ?? $track->playback_count;
             $track->performer = $trackData['user']['username'] ?? $trackData['publisher_metadata']['artist'] ?? $track->performer;
             $track->artist_slug = $trackData['user']['permalink'] ?? $track->artist_slug;
-            $track->name = $this->getNameByTitle($trackData['title']) ?? $track->name;
+            $track->name = $this->getTrackNameByTitle($trackData['title']) ?? $track->name;
             $tracks[] = $track;
 
             $this->log('Parsed track attributes:', $track->getDirtyAttributes());

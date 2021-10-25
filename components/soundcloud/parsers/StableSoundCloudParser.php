@@ -22,7 +22,7 @@ class StableSoundCloudParser extends SoundCloudParser
     public function parseArtist(string $slug): Artist
     {
         $artist = $this->parserHtml->parseArtist($slug);
-        $this->_isSuccessLastParse = $this->parserHtml->isSuccessLastParse;
+        $this->addErrors([self::PARSE_ERROR => $this->parserHtml->parseErrors]);
         return $artist;
     }
 
@@ -32,7 +32,7 @@ class StableSoundCloudParser extends SoundCloudParser
     public function parseTracks(string $artistSlug, int $limit = NULL): array
     {
         $tracks = $this->parserApi->parseTracks($artistSlug, $limit);
-        $this->_isSuccessLastParse = $this->parserApi->isSuccessLastParse;
+        $this->addErrors([self::PARSE_ERROR => $this->parserApi->parseErrors]);
         return $tracks;
     }
 
