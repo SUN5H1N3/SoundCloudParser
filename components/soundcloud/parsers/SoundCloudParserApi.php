@@ -37,12 +37,16 @@ class SoundCloudParserApi extends SoundCloudParser
     {
         $this->_isSuccessLastParse = false;
 
-        $artistId = $this->getArtistIdBySlug($artistSlug);
-        $tracksData = $this->getTracksData($artistId, $limit);
-        return $this->getTrackModels($tracksData);
+        $artist = $this->getArtistBySlug($artistSlug);
+        $tracksData = $this->getTracksData($artist->soundcloud_id, $limit);
+        return $this->getTrackModels($tracksData, $artist);
     }
 
-    private function getArtistIdBySlug(string $artistSlug): int
+    /**
+     * @throws \yii\base\Exception
+     * @throws InvalidConfigException
+     */
+    private function getArtistBySlug(string $artistSlug): Artist
     {
         $dbArtist = Artist::find()
             ->select('soundcloud_id')
@@ -50,19 +54,20 @@ class SoundCloudParserApi extends SoundCloudParser
             ->one();
 
         if ($dbArtist && $dbArtist->soundcloud_id) {
-            return $dbArtist->soundcloud_id;
+            return $dbArtist;
         }
 
         $htmlParser = new SoundCloudParserHtml();
-        return $htmlParser->parseArtist($artistSlug)->soundcloud_id;
+        return $htmlParser->parseArtist($artistSlug);
     }
 
     /**
      * @param Track[] $tracksData
+     * @param Artist $artist
      * @return array
      * @throws InvalidConfigException
      */
-    private function getTrackModels(array $tracksData): array
+    private function getTrackModels(array $tracksData, Artist $artist): array
     {
         if (!$tracksData) {
             return [];
@@ -75,13 +80,15 @@ class SoundCloudParserApi extends SoundCloudParser
         foreach ($tracksData as $trackData) {
             $track = new Track();
             $track->comment_count = $trackData['comment_count'] ?? $track->comment_count;
+            $track->artist_id = $artist->id ?? $track->artist_id;
             $track->duration = $trackData['duration'] ?? $track->duration;
             $track->genre = $trackData['genre'] ?? $track->genre;
             $track->soundcloud_id = $trackData['id'] ?? $track->soundcloud_id;
-            $track->publication_date = Yii::$app->formatter->asDate($trackData['release_date'], 'php:Y-m-d H:i:s') ?? $track->publication_date;
+            $publicationDate = $tracksData['release_date'] ?? $tracksData['display_date'] ?? $trackData['created_at'];
+            $track->publication_date = Yii::$app->formatter->asDate($publicationDate, 'php:Y-m-d H:i:s') ?? $track->publication_date;
             $track->slug = $trackData['permalink'] ?? $track->slug;
             $track->playback_count = $trackData['playback_count'] ?? $track->playback_count;
-            $track->performer = $trackData['publisher_metadata']['artist'] ?? $track->performer;
+            $track->performer = $trackData['user']['username'] ?? $trackData['publisher_metadata']['artist'] ?? $track->performer;
             $track->artist_slug = $trackData['user']['permalink'] ?? $track->artist_slug;
             $track->name = $this->getNameByTitle($trackData['title']) ?? $track->name;
             $tracks[] = $track;
@@ -104,7 +111,6 @@ class SoundCloudParserApi extends SoundCloudParser
             'limit' => $limit,
         ]);
         $data = $this->getTracksDataRecursive($response->data, $limit);
-//        var_dump($data);exit;
         return $data ? array_slice($data, 0, $limit) : [];
     }
 
@@ -124,7 +130,7 @@ class SoundCloudParserApi extends SoundCloudParser
         }
         $nextHref = $prevResponseData['next_href'] ?? NULL;
         if (!$nextHref) {
-            return [];
+            return $collection;
         }
         $nextHref = Url::addQueryParams($nextHref, ['client_id' => $this->api->getClientId()]);
         $this->log("Recursive request ($collectionCount received)", $nextHref);

@@ -104,7 +104,7 @@ class ParseController extends Controller
 
                     $prevCounter = $counter;
                     $message = $this->saveModel($track, $counter);
-                    if ($counter > $prevCounter) {
+                    if ($counter === $prevCounter) {
                         echo $message;
                     }
                 }

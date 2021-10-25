@@ -42,8 +42,8 @@ class Track extends ExtendedActiveRecord
     public function rules(): array
     {
         return [
-            [['publication_date'], 'filter', 'filter' => static function ($date) {
-                return Yii::$app->formatter->asDate($date, 'php:Y-m-d H:i:s');
+            [['publication_date'], 'filter', 'filter' => static function (?string $date) {
+                return $date ? Yii::$app->formatter->asDate($date, 'php:Y-m-d H:i:s') : $date;
             }],
             [['publication_date'], 'datetime', 'format' => 'php:Y-m-d H:i:s'],
             [['playback_count', 'comment_count', 'duration', 'soundcloud_id', 'artist_id'], 'integer'],
