@@ -25,7 +25,7 @@ class ParseController extends Controller
 
         if (!$parser->hasErrors()) {
             foreach ($tracks as $track) {
-                echo $this->saveModel($track, $modelsSavedCount);
+                echo $this->saveModelWithMessage($track, $modelsSavedCount);
             }
         }
     }
@@ -41,7 +41,7 @@ class ParseController extends Controller
         $artist = $parser->parseArtist($slug);
 
         if (!$parser->hasErrors()) {
-            echo $this->saveModel($artist);
+            echo $this->saveModelWithMessage($artist);
         }
     }
 
@@ -73,7 +73,7 @@ class ParseController extends Controller
                     $track->artist_id = $artists[$track->artist_slug]->id;
 
                     $prevCounter = $counter;
-                    $message = $this->saveModel($track, $counter);
+                    $message = $this->saveModelWithMessage($track, $counter);
                     if ($counter === $prevCounter) {
                         echo $message;
                     }
@@ -114,7 +114,7 @@ class ParseController extends Controller
      * @param int|null $counter
      * @return string
      */
-    private function saveModel(ActiveRecord $model, int &$counter = NULL): string
+    private function saveModelWithMessage(ActiveRecord $model, int &$counter = NULL): string
     {
         if (!$model->save()) {
             return 'Validation failed: ' . PHP_EOL . print_r($model->errors, true) . PHP_EOL;
