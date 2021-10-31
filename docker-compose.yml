@@ -7,7 +7,7 @@ services:
       - ./:/app
 
   nginx:
-    image: nginx:1.12-alpine
+    image: nginx:latest
     ports:
       - "8080:80"
     #      - 443:443
@@ -16,18 +16,22 @@ services:
       - ./docker/nginx/vhost.conf:/etc/nginx/conf.d/vhost.conf
     depends_on:
       - app
-#  db:
-#    build: docker/pgsql
-#    ports:
-#      - 5432:5432
-#    environment:
-#      - POSTGRES_DB=blackterminal
-#      - POSTGRES_USER=blackterminal
-#      - POSTGRES_PASSWORD=1234
-#    volumes:
-#      - ./docker/pgsql:/var/www/html/db
-#    networks:
-#      static-network:
-#        ipv4_address: 170.20.0.5
+    links:
+      - db
 
+  db:
+    image: mysql
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./docker/mysql:/var/www/html/db
+#    volumes:
+#      - /etc/mysql:/etc/mysql
+#      - ./logs/mysql:/var/log/mysql
+#      - ./mysql:/var/lib/mysql
+#      - ./mysql-files:/var/lib/mysql-files
+#      - ./data:/docker-entrypoint-initdb.d
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: soundcloudparser
 

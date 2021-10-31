@@ -15,6 +15,10 @@ Thumbs.db
 # composer vendor dir
 /vendor
 
+# nginx logs
+/web/log/nginx_access.log
+/web/log/nginx_error.log
+
 # composer itself is not needed
 composer.phar
 

@@ -2,12 +2,12 @@
 
 return [
     'class' => 'yii\db\Connection',
-    'dsn' => 'mysql:host=localhost;dbname=soundcloudparser',
+    'dsn' => 'mysql:host=db;port=3306;dbname=soundcloudparser',
     'username' => 'root',
-    'password' => '',
+    'password' => 'password',
     'charset' => 'utf8',
 
-    'enableSchemaCache' => true,
-    'schemaCacheDuration' => 60,
-    'schemaCache' => 'cache',
+//    'enableSchemaCache' => true,
+//    'schemaCacheDuration' => 60,
+//    'schemaCache' => 'cache',
 ];
