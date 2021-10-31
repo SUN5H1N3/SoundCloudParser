@@ -1,24 +1,33 @@
-version: '3'
-services:
-#  nginx:
-#    # используем последний стабильный образ nginx
-#    image: nginx:latest
-#    # маршрутизируем порты
-#    ports:
-#      - "80:80"
-#    # монтируем директории, слева директории на основной машине, справа - куда они монтируются в контейнере
-#    volumes:
-#      - ./docker/nginx/host:/etc/nginx/conf.d
-#      - ./docker/nginx/www:/var/www
-#      - ./docker/nginx/logs:/var/log/nginx
-#    # nginx должен общаться с php контейнером
-#    links:
-#      - app
+version: "3"
 
+services:
   app:
-    build:
-      context: docker/php
-    ports:
-      - "8080:9000"
+    build: docker/php
     volumes:
-      - .:/var/www
+      - ./:/app
+
+  nginx:
+    image: nginx:1.12-alpine
+    ports:
+      - "8080:80"
+    #      - 443:443
+    volumes:
+      - ./:/app
+      - ./docker/nginx/vhost.conf:/etc/nginx/conf.d/vhost.conf
+    depends_on:
+      - app
+#  db:
+#    build: docker/pgsql
+#    ports:
+#      - 5432:5432
+#    environment:
+#      - POSTGRES_DB=blackterminal
+#      - POSTGRES_USER=blackterminal
+#      - POSTGRES_PASSWORD=1234
+#    volumes:
+#      - ./docker/pgsql:/var/www/html/db
+#    networks:
+#      static-network:
+#        ipv4_address: 170.20.0.5
+
+
