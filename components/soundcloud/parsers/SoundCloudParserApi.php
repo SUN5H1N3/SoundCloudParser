@@ -121,7 +121,9 @@ class SoundCloudParserApi extends SoundCloudParser
 
     /**
      * @param array $prevResponseData
+     * @param int|null $collectionLimit
      * @param int $recursiveLimit
+     * @param array $collection
      * @return array
      * @throws Exception
      * @throws InvalidConfigException

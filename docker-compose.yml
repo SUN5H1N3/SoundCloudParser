@@ -1,9 +1,24 @@
-version: '2'
+version: '3'
 services:
-  php:
-    image: yiisoftware/yii2-php:7.4-apache
-    volumes:
-      - ~/.composer-docker/cache:/root/.composer/cache:delegated
-      - ./:/app:delegated
+#  nginx:
+#    # используем последний стабильный образ nginx
+#    image: nginx:latest
+#    # маршрутизируем порты
+#    ports:
+#      - "80:80"
+#    # монтируем директории, слева директории на основной машине, справа - куда они монтируются в контейнере
+#    volumes:
+#      - ./docker/nginx/host:/etc/nginx/conf.d
+#      - ./docker/nginx/www:/var/www
+#      - ./docker/nginx/logs:/var/log/nginx
+#    # nginx должен общаться с php контейнером
+#    links:
+#      - app
+
+  app:
+    build:
+      context: docker/php
     ports:
-      - '8000:80'
+      - "8080:9000"
+    volumes:
+      - .:/var/www
